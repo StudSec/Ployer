@@ -51,7 +51,7 @@ class ChallManagerRunner(ChallengeRunner):
             "scenario": f"{self.config.registry}chall-manager/deploy:latest",
             "additional": {
                 "port": port,
-                "docker_host": "ssh://challs",
+                "docker_host": "unix:///var/run/docker.sock",
                 "hostname": self.config.hostname,
                 "image": "swarm/" + get_docker_name(challenge.name),
                 "protocol_url": "http" if challenge.url and "http" in challenge.url else "tcp",
