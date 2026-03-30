@@ -474,6 +474,7 @@ name = "ployer"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
+    { name = "requests" },
     { name = "termcolor" },
 ]
 
@@ -490,7 +491,10 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "termcolor", specifier = ">=3.3.0" }]
+requires-dist = [
+    { name = "requests", specifier = ">=2.33.0" },
+    { name = "termcolor", specifier = ">=3.3.0" },
+]
 
 [package.metadata.requires-dev]
 dev = [

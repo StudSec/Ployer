@@ -15,7 +15,10 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-dependencies = ["termcolor>=3.3.0"]
+dependencies = [
+    "requests>=2.33.0",
+    "termcolor>=3.3.0",
+]
 
 [project.urls]
 Homepage = "https://StudSec.github.io/Ployer/"

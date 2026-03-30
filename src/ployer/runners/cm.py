@@ -11,18 +11,26 @@ class ChallManagerRunner(ChallengeRunner):
     def run(self, challenge: Challenge) -> bool:
         logging.info(f"Starting {challenge.name} as chall manager container...")
 
+        if not self.config.registry:
+            logging.error("A Docker registry is required for instanced challenges. Pass --registry.")
+            return False
+
         chall_name = get_docker_name(challenge.name)
-        chall_tag = "swarm/" + chall_name
+        chall_tag = self.config.registry + "swarm/" + chall_name
 
         try:
             subprocess.run(
                 ["docker", "build", "-t", chall_tag, "."],
                 cwd=challenge.path + "/Source/",
+                capture_output=True,
+                text=True,
                 check=True,
             )
 
             subprocess.run(
                 ["docker", "push", chall_tag],
+                capture_output=True,
+                text=True,
                 check=True,
             )
         except subprocess.CalledProcessError as e:
@@ -32,14 +40,31 @@ class ChallManagerRunner(ChallengeRunner):
         return True
 
     def get_host_data(self, challenge: Challenge) -> dict | None:
+        if not self.config.registry:
+            logging.error("A Docker registry is required for instanced challenges. Pass --registry.")
+            return None
+
+        chall_name = get_docker_name(challenge.name)
+        chall_tag = self.config.registry + "swarm/" + chall_name
+
         try:
-            port = subprocess.run(
-                ["docker", "inspect", get_docker_name(challenge.name), "--format", "{{json .Config.ExposedPorts}}"],
+            port_result = subprocess.run(
+                [
+                    "docker",
+                    "inspect",
+                    chall_tag,
+                    "--format",
+                    "{{json .Config.ExposedPorts}}",
+                ],
                 capture_output=True,
                 text=True,
                 check=True,
             )
-            port = next(json.loads(port.stdout).keys())[0].split("/")[0]
+            exposed_ports = json.loads(port_result.stdout)
+            if not exposed_ports:
+                logging.error(f"No exposed ports found for {challenge.name}")
+                return None
+            port = next(iter(exposed_ports)).split("/")[0]
         except subprocess.CalledProcessError as e:
             logging.exception(f"Non-zero exit code {e.returncode} whilst inspecting {challenge.name}: {e.stderr}")
             return None
@@ -53,8 +78,8 @@ class ChallManagerRunner(ChallengeRunner):
                 "port": port,
                 "docker_host": "unix:///var/run/docker.sock",
                 "hostname": self.config.hostname,
-                "image": "swarm/" + get_docker_name(challenge.name),
-                "protocol_url": "http" if challenge.url and "http" in challenge.url else "tcp",
+                "image": chall_tag,
+                "protocol_url": "http" if challenge.url and "http" in challenge.url else "nc",
             },
         }
 

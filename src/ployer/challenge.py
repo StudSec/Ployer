@@ -46,12 +46,16 @@ def load_challenge(filepath: str) -> Challenge:
     challenge_uuid = next(iter(data.keys()))
     challenge_data = data[challenge_uuid]
     challenge_data["uuid"] = challenge_uuid
-    challenge_data["category"] = filepath.rsplit("/", 2)[-2]
+    challenge_data["category"] = filepath.rsplit("/", 3)[1]
     challenge_data["path"] = filepath.rsplit("/", 1)[0]
     challenge_data["handouts"] = []
 
     for dirpath, _, filenames in os.walk(challenge_data["path"] + "/Handout"):
         for filename in filenames:
             challenge_data["handouts"].append(os.path.join(dirpath, filename))
+
+    url = challenge_data.get("url")
+    if url and isinstance(url, list):
+        challenge_data["url"] = url[0]
 
     return Challenge(**challenge_data)

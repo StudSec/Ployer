@@ -25,6 +25,8 @@ class CustomRunner(ChallengeRunner):
                 cmd,
                 cwd=challenge.path + "/Source/",
                 check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
         except subprocess.CalledProcessError as e:
             logging.exception(f"Non-zero exit code {e.returncode} whilst starting {challenge.name}: {e.stderr}")
@@ -45,6 +47,8 @@ class CustomRunner(ChallengeRunner):
                 ["/bin/bash", challenge.path + "/Source/destroy.sh"],
                 cwd=challenge.path + "/Source/",
                 check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
         except subprocess.CalledProcessError as e:
             logging.exception(f"Non-zero exit code {e.returncode} whilst stopping {challenge.name}: {e.stderr}")

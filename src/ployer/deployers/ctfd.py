@@ -27,6 +27,15 @@ def challenge_to_ctfd(challenge: Challenge, config: Config, runner: ChallengeRun
             port = host_data["port"]
             data["connection_info"] = challenge.url.replace("{{PORT}}", str(port)).replace("{{HOST}}", config.hostname)
     if config.type == "static":
+        if challenge.instanced:
+            # bit of a hack since chall manager doesnt really have static score
+            return data | {
+                "type": "dynamic_iac",
+                "initial": next(iter(challenge.flag.values())),
+                "decay": 20,
+                "minimum": next(iter(challenge.flag.values())),
+                "function": "logarithmic",
+            }
         return {
             "value": next(iter(challenge.flag.values())),
         } | data
@@ -42,8 +51,11 @@ def challenge_to_ctfd(challenge: Challenge, config: Config, runner: ChallengeRun
 
 def upload_ctfd(challenge: Challenge, config: Config, runner: ChallengeRunner) -> None:  # noqa: C901
     if not config.ctfd_url or not config.ctfd_token:
+        print("here")
         logging.error("CTFd URL and API key must be provided to upload challenges.")
         return
+
+    logging.info(f"Uploading {challenge.name} to CTFd...")
 
     url = f"{config.ctfd_url}/api/v1/"
     headers = {"Authorization": f"Token {config.ctfd_token}", "Content-Type": "application/json"}
@@ -100,6 +112,8 @@ def upload_ctfd(challenge: Challenge, config: Config, runner: ChallengeRunner) -
             ["zip", "-r", filename, "."],
             cwd=challenge.path + "/Handout",
             check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
         )
     except subprocess.CalledProcessError:
         logging.exception(f"Failed to create zip file for {challenge.name}")

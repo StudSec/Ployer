@@ -19,23 +19,29 @@ class SwarmRunner(ChallengeRunner):
                 ["docker", "build", "-t", chall_tag, "."],
                 cwd=challenge.path + "/Source/",
                 check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
 
             subprocess.run(
                 ["docker", "push", chall_tag],
                 check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
 
             subprocess.run(
                 ["docker", "service", "create", "--name", chall_name, "--publish", "80", "--replicas", "1", chall_tag],
                 check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
             )
         except subprocess.CalledProcessError as e:
             logging.exception(f"Non-zero exit code {e.returncode} whilst starting {challenge.name}: {e.stderr}")
             return False
         return True
 
-    def port(self, challenge: Challenge) -> dict | None:
+    def get_host_data(self, challenge: Challenge) -> dict | None:
         try:
             result = subprocess.run(
                 [
@@ -63,7 +69,12 @@ class SwarmRunner(ChallengeRunner):
         logging.info(f"Stopping {challenge.name} swarm service...")
 
         try:
-            subprocess.run(["docker", "service", "rm", "-f", get_docker_name(challenge.name)], check=True)
+            subprocess.run(
+                ["docker", "service", "rm", "-f", get_docker_name(challenge.name)],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         except subprocess.CalledProcessError as e:
             logging.exception(f"Non-zero exit code {e.returncode} whilst stopping {challenge.name}: {e.stderr}")
             return False

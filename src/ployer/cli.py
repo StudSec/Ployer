@@ -6,12 +6,13 @@ from pathlib import Path
 import termcolor
 
 from ployer.challenge import Challenge, load_challenge
-from ployer.config import Config
+from ployer.config import Config, normalize_registry
 from ployer.deployers.ctfd import upload_ctfd
 from ployer.runners.base import ChallengeRunner
 from ployer.runners.cm import ChallManagerRunner
 from ployer.runners.custom import CustomRunner
 from ployer.runners.docker import DockerRunner
+from ployer.runners.none import NoneRunner
 from ployer.runners.swarm import SwarmRunner
 
 
@@ -54,6 +55,8 @@ def _matches(value: str, patterns: str) -> bool:
 
 
 def _pick_runner(runner_name: str, challenge: Challenge, config: Config) -> ChallengeRunner:
+    if not os.path.isdir(os.path.join(challenge.path, "Source")):
+        return NoneRunner(config)
     if os.path.isfile(os.path.join(challenge.path, "Source", "run.sh")):
         return CustomRunner(config)
     if runner_name == "swarm":
@@ -81,6 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--runner",
         choices=["docker", "swarm"],
         help="Runner backend for challenges that do not have a custom or instancer setup",
+        default="docker",
     )
     parser.add_argument(
         "--ctfd", type=str, const="*", nargs="?", help="Upload challenge(s) to CTFd instance at given 'URL TOKEN'"
@@ -99,13 +103,13 @@ def main() -> int:
     config = Config(
         type=args.type,
         hostname=args.host,
-        registry=args.registry,
+        registry=normalize_registry(args.registry),
         ctfd_url=args.ctfd.split()[0] if args.ctfd else None,
         ctfd_token=args.ctfd.split()[1] if args.ctfd else None,
     )
     setup_logging(args.log_level)
 
-    if not any([args.challenges, args.run, args.stop, args.port]):
+    if not any([args.challenges, args.run, args.stop, args.ctfd]):
         parser.print_help()
         return 0
 
@@ -131,7 +135,7 @@ def main() -> int:
     if args.ctfd:
         _foreach_challenge(
             challenges,
-            args.ctfd,
+            args.ctfd.split()[2] if len(args.ctfd.split()) > 2 else args.run if args.run else "*",
             lambda challenge: upload_ctfd(challenge, config, _pick_runner(args.runner, challenge, config)),
         )
 
