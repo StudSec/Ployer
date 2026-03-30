@@ -78,6 +78,7 @@ class ChallManagerRunner(ChallengeRunner):
                 "port": port,
                 "docker_host": "unix:///var/run/docker.sock",
                 "hostname": self.config.hostname,
+                "registry": self.config.registry,
                 "image": chall_tag,
                 "protocol_url": "http" if challenge.url and "http" in challenge.url else "nc",
             },
