@@ -72,6 +72,26 @@ def _foreach_challenge(challenges: list[Challenge], pattern: str, action) -> Non
             action(challenge)
 
 
+def _run_if_needed(challenge: Challenge, runner_name: str, config: Config) -> None:
+    runner = _pick_runner(runner_name, challenge, config)
+    is_running = runner.is_running(challenge)
+
+    # Unknown state support -> preserve old behavior (stop+run)
+    if is_running is None:
+        runner.stop(challenge)
+        runner.run(challenge)
+        return
+
+    if is_running:
+        has_changed = runner.has_changed(challenge)
+        if has_changed is False:
+            logging.info(f"Skipping {challenge.name}: already running and unchanged")
+            return
+        runner.stop(challenge)
+
+    runner.run(challenge)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Ployer CLI")
     parser.add_argument("--root", type=Path, default=Path.cwd(), help="Path to challenges root")
@@ -121,13 +141,7 @@ def main() -> int:
     if args.challenges:
         _foreach_challenge(challenges, "*", lambda challenge: print(challenge))
     if args.run:
-        # Stop challenges before running to make sure everything is updated
-        _foreach_challenge(
-            challenges, args.run, lambda challenge: _pick_runner(args.runner, challenge, config).stop(challenge)
-        )
-        _foreach_challenge(
-            challenges, args.run, lambda challenge: _pick_runner(args.runner, challenge, config).run(challenge)
-        )
+        _foreach_challenge(challenges, args.run, lambda challenge: _run_if_needed(challenge, args.runner, config))
     if args.stop:
         _foreach_challenge(
             challenges, args.stop, lambda challenge: _pick_runner(args.runner, challenge, config).stop(challenge)

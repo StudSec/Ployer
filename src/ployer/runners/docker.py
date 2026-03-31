@@ -2,15 +2,52 @@ import logging
 import subprocess
 
 from ployer.challenge import Challenge
-from ployer.runners._utils import get_docker_name, get_docker_port
+from ployer.runners._utils import get_docker_name, get_docker_port, get_source_hash
 from ployer.runners.base import ChallengeRunner
 
 
 class DockerRunner(ChallengeRunner):
+    def is_running(self, challenge: Challenge) -> bool | None:
+        chall_name = get_docker_name(challenge.name)
+        result = subprocess.run(
+            ["docker", "inspect", "--format", "{{.State.Running}}", chall_name],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return False
+        return result.stdout.strip().lower() == "true"
+
+    def has_changed(self, challenge: Challenge) -> bool | None:
+        chall_name = get_docker_name(challenge.name)
+        source_hash = get_source_hash(challenge.path + "/Source/")
+
+        result = subprocess.run(
+            [
+                "docker",
+                "inspect",
+                "--format",
+                '{{ index .Config.Labels "ployer.source_hash" }}',
+                chall_name,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return True
+
+        running_hash = result.stdout.strip()
+        if not running_hash:
+            return True
+        return running_hash != source_hash
+
     def run(self, challenge: Challenge) -> bool:
         logging.info(f"Starting {challenge.name} as standard Docker container...")
 
         chall_name = get_docker_name(challenge.name)
+        source_hash = get_source_hash(challenge.path + "/Source/")
 
         try:
             subprocess.run(
@@ -32,6 +69,8 @@ class DockerRunner(ChallengeRunner):
                     chall_name,
                     "--cpus=0.5",
                     "--memory=256m",
+                    "--label",
+                    f"ployer.source_hash={source_hash}",
                     chall_name,
                 ],
                 check=True,

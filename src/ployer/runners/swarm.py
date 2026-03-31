@@ -3,16 +3,49 @@ import logging
 import subprocess
 
 from ployer.challenge import Challenge
-from ployer.runners._utils import get_docker_name
+from ployer.runners._utils import get_docker_name, get_source_hash
 from ployer.runners.base import ChallengeRunner
 
 
 class SwarmRunner(ChallengeRunner):
+    def is_running(self, challenge: Challenge) -> bool | None:
+        result = subprocess.run(
+            ["docker", "service", "inspect", get_docker_name(challenge.name)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return result.returncode == 0
+
+    def has_changed(self, challenge: Challenge) -> bool | None:
+        source_hash = get_source_hash(challenge.path + "/Source/")
+        result = subprocess.run(
+            [
+                "docker",
+                "service",
+                "inspect",
+                get_docker_name(challenge.name),
+                "--format",
+                '{{ index .Spec.Labels "ployer.source_hash" }}',
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return True
+
+        running_hash = result.stdout.strip()
+        if not running_hash:
+            return True
+        return running_hash != source_hash
+
     def run(self, challenge: Challenge) -> bool:
         logging.info(f"Starting {challenge.name} as swarm service...")
 
         chall_name = get_docker_name(challenge.name)
         chall_tag = "swarm/" + chall_name
+        source_hash = get_source_hash(challenge.path + "/Source/")
 
         try:
             subprocess.run(
@@ -31,7 +64,20 @@ class SwarmRunner(ChallengeRunner):
             )
 
             subprocess.run(
-                ["docker", "service", "create", "--name", chall_name, "--publish", "80", "--replicas", "1", chall_tag],
+                [
+                    "docker",
+                    "service",
+                    "create",
+                    "--name",
+                    chall_name,
+                    "--label",
+                    f"ployer.source_hash={source_hash}",
+                    "--publish",
+                    "80",
+                    "--replicas",
+                    "1",
+                    chall_tag,
+                ],
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
