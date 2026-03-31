@@ -55,7 +55,7 @@ def _matches(value: str, patterns: str) -> bool:
 
 
 def _pick_runner(runner_name: str, challenge: Challenge, config: Config) -> ChallengeRunner:
-    if not os.path.isdir(os.path.join(challenge.path, "Source")):
+    if not os.path.isdir(os.path.join(challenge.path, "Source")) or not challenge.url:
         return NoneRunner(config)
     if os.path.isfile(os.path.join(challenge.path, "Source", "run.sh")):
         return CustomRunner(config)

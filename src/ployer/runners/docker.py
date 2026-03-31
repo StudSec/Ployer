@@ -51,11 +51,9 @@ class DockerRunner(ChallengeRunner):
 
         try:
             subprocess.run(
-                ["docker", "build", "-t", chall_name, "."],
+                ["docker", "buildx", "build", "--load", "-t", chall_name, "."],
                 cwd=challenge.path + "/Source/",
                 check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
             )
 
             subprocess.run(
@@ -74,8 +72,6 @@ class DockerRunner(ChallengeRunner):
                     chall_name,
                 ],
                 check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
             )
         except subprocess.CalledProcessError as e:
             logging.exception(f"Non-zero exit code {e.returncode} whilst starting {challenge.name}: {e.stderr}")

@@ -44,43 +44,54 @@ class SwarmRunner(ChallengeRunner):
         logging.info(f"Starting {challenge.name} as swarm service...")
 
         chall_name = get_docker_name(challenge.name)
-        chall_tag = "swarm/" + chall_name
+        chall_tag = self.config.registry + "swarm/" + chall_name
         source_hash = get_source_hash(challenge.path + "/Source/")
 
         try:
             subprocess.run(
-                ["docker", "build", "-t", chall_tag, "."],
+                ["docker", "buildx", "build", "--push", "-t", chall_tag, "."],
                 cwd=challenge.path + "/Source/",
                 check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
             )
 
-            subprocess.run(
-                ["docker", "push", chall_tag],
+            # get the port from the built image
+            port_result = subprocess.run(
+                [
+                    "docker",
+                    "inspect",
+                    chall_tag,
+                    "--format",
+                    "{{json .Config.ExposedPorts}}",
+                ],
+                capture_output=True,
+                text=True,
                 check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
             )
+            ports_info = json.loads(port_result.stdout)
+            if not ports_info:
+                logging.error(f"No exposed ports found for {challenge.name}. Ensure the Dockerfile exposes a port.")
+                return False
+            port = next(iter(ports_info.keys())).split("/")[0]
 
             subprocess.run(
                 [
                     "docker",
                     "service",
                     "create",
+                    "--with-registry-auth",
                     "--name",
                     chall_name,
                     "--label",
                     f"ployer.source_hash={source_hash}",
-                    "--publish",
-                    "80",
                     "--replicas",
                     "1",
+                    "--constraint",
+                    "node.labels.type==challs",
+                    "--publish",
+                    f"target={port}",
                     chall_tag,
                 ],
                 check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
             )
         except subprocess.CalledProcessError as e:
             logging.exception(f"Non-zero exit code {e.returncode} whilst starting {challenge.name}: {e.stderr}")
@@ -116,7 +127,7 @@ class SwarmRunner(ChallengeRunner):
 
         try:
             subprocess.run(
-                ["docker", "service", "rm", "-f", get_docker_name(challenge.name)],
+                ["docker", "service", "rm", get_docker_name(challenge.name)],
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
