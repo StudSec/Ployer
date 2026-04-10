@@ -59,10 +59,10 @@ def _pick_runner(runner_name: str, challenge: Challenge, config: Config) -> Chal
         return NoneRunner(config)
     if os.path.isfile(os.path.join(challenge.path, "Source", "run.sh")):
         return CustomRunner(config)
-    if runner_name == "swarm":
-        return SwarmRunner(config)
     if challenge.instanced:
         return ChallManagerRunner(config)
+    if runner_name == "swarm":
+        return SwarmRunner(config)
     return DockerRunner(config)
 
 

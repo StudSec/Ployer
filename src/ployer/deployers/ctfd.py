@@ -56,7 +56,7 @@ def _get_all_challenges(url: str, headers: dict[str, str]) -> list[dict[str, Any
     challenges: list[dict[str, Any]] = []
 
     while True:
-        response = requests.get(url + "challenges", headers=headers, params={"page": page}, timeout=60)
+        response = requests.get(url + "challenges", headers=headers, params={"page": page}, timeout=600)
         if response.status_code != 200:
             break
 
@@ -82,7 +82,7 @@ def _find_challenge(url: str, headers: dict[str, str], name: str) -> dict[str, A
 
 
 def _get_collection(url: str, headers: dict[str, str], resource: str, challenge_id: int) -> list[dict[str, Any]]:
-    response = requests.get(url + resource, headers=headers, params={"challenge_id": challenge_id}, timeout=60)
+    response = requests.get(url + resource, headers=headers, params={"challenge_id": challenge_id}, timeout=600)
     if response.status_code != 200:
         return []
 
@@ -100,23 +100,23 @@ def _upsert_flag(url: str, headers: dict[str, str], challenge: Challenge, challe
 
     if not flags:
         payload = {"challenge_id": challenge_id} | desired
-        response = requests.post(url + "flags", json=payload, headers=headers, timeout=60)
+        response = requests.post(url + "flags", json=payload, headers=headers, timeout=600)
         if response.status_code != 200:
             logging.error(f"Failed to upload flag for {challenge.name}: {response.text}")
         return
 
     first_flag = flags[0]
-    response = requests.patch(url + f"flags/{first_flag['id']}", json=desired, headers=headers, timeout=60)
+    response = requests.patch(url + f"flags/{first_flag['id']}", json=desired, headers=headers, timeout=600)
     if response.status_code != 200:
         logging.error(f"Failed to patch flag for {challenge.name}: {response.text}")
 
     for extra_flag in flags[1:]:
-        requests.delete(url + f"flags/{extra_flag['id']}", headers=headers, timeout=60)
+        requests.delete(url + f"flags/{extra_flag['id']}", headers=headers, timeout=600)
 
 
 def _replace_hints(url: str, headers: dict[str, str], challenge: Challenge, challenge_id: int) -> None:
     for hint in _get_collection(url, headers, "hints", challenge_id):
-        requests.delete(url + f"hints/{hint['id']}", headers=headers, timeout=60)
+        requests.delete(url + f"hints/{hint['id']}", headers=headers, timeout=600)
 
     for hint in challenge.hints:
         hint_data = {
@@ -125,14 +125,14 @@ def _replace_hints(url: str, headers: dict[str, str], challenge: Challenge, chal
             "type": "standard",
             "cost": 0,
         }
-        hint_response = requests.post(url + "hints", json=hint_data, headers=headers, timeout=60)
+        hint_response = requests.post(url + "hints", json=hint_data, headers=headers, timeout=600)
         if hint_response.status_code != 200:
             logging.error(f"Failed to upload hint for {challenge.name}: {hint_response.text}")
 
 
 def _replace_tags(url: str, headers: dict[str, str], challenge: Challenge, challenge_id: int) -> None:
     for tag in _get_collection(url, headers, "tags", challenge_id):
-        requests.delete(url + f"tags/{tag['id']}", headers=headers, timeout=60)
+        requests.delete(url + f"tags/{tag['id']}", headers=headers, timeout=600)
 
     for tag in [challenge.difficulty, *challenge.tags]:
         tag_data = {
@@ -140,7 +140,7 @@ def _replace_tags(url: str, headers: dict[str, str], challenge: Challenge, chall
             "value": tag,
         }
 
-        tag_response = requests.post(url + "tags", json=tag_data, headers=headers, timeout=60)
+        tag_response = requests.post(url + "tags", json=tag_data, headers=headers, timeout=600)
         if tag_response.status_code != 200:
             logging.error(f"Failed to upload tag for {challenge.name}: {tag_response.text}")
 
@@ -155,7 +155,7 @@ def _replace_handout(url: str, headers: dict[str, str], challenge: Challenge, ch
 
     for file_item in _get_collection(url, headers, "files", challenge_id):
         if filename in file_item.get("location", ""):
-            requests.delete(url + f"files/{file_item['id']}", headers=headers, timeout=60)
+            requests.delete(url + f"files/{file_item['id']}", headers=headers, timeout=600)
     try:
         subprocess.run(
             ["zip", "-r", filename, "."],
@@ -175,7 +175,7 @@ def _replace_handout(url: str, headers: dict[str, str], challenge: Challenge, ch
             headers={"Authorization": headers["Authorization"]},
             files=[("file", (filename, file, "application/zip"))],
             data={"challenge_id": challenge_id, "type": "challenge"},
-            timeout=60,
+            timeout=600,
         )
         if file_response.status_code != 200:
             logging.error(f"Failed to upload handout for {challenge.name}: {file_response.text}")
@@ -198,13 +198,13 @@ def upload_ctfd(challenge: Challenge, config: Config, runner: ChallengeRunner) -
     if existing:
         # Challenge exists, update it
         challenge_id = existing["id"]
-        patch_response = requests.patch(url + f"challenges/{challenge_id}", headers=headers, json=ctfd_data, timeout=60)
+        patch_response = requests.patch(url + f"challenges/{challenge_id}", headers=headers, json=ctfd_data, timeout=600)
         if patch_response.status_code != 200:
             logging.error(f"Failed to patch {challenge.name} on CTFd: {patch_response.text}")
             return
     else:
         # Challenge doesn't exist, create it
-        response = requests.post(url + "challenges", headers=headers, json=ctfd_data, timeout=60)
+        response = requests.post(url + "challenges", headers=headers, json=ctfd_data, timeout=600)
         if response.status_code != 200:
             logging.error(f"Failed to upload {challenge.name} to CTFd: {response.text}")
             return
