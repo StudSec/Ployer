@@ -29,28 +29,28 @@ jobs:
           name: pyproject-toml
           path: pyproject.toml
 
-  publish:
-    runs-on: ubuntu-latest
-    needs: [set-version]
-    steps:
-      - name: Check out
-        uses: actions/checkout@v4
+  # publish:
+  #   runs-on: ubuntu-latest
+  #   needs: [set-version]
+  #   steps:
+  #     - name: Check out
+  #       uses: actions/checkout@v4
 
-      - name: Set up the environment
-        uses: ./.github/actions/setup-python-env
+  #     - name: Set up the environment
+  #       uses: ./.github/actions/setup-python-env
 
-      - name: Download updated pyproject.toml
-        uses: actions/download-artifact@v4
-        with:
-          name: pyproject-toml
+  #     - name: Download updated pyproject.toml
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: pyproject-toml
 
-      - name: Build package
-        run: uv build
+  #     - name: Build package
+  #       run: uv build
 
-      - name: Publish package
-        run: uv publish
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+  #     - name: Publish package
+  #       run: uv publish
+  #       env:
+  #         UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
 
   deploy-docs:
     needs: publish
