@@ -44,7 +44,7 @@ class SwarmRunner(ChallengeRunner):
         logging.info(f"Starting {challenge.name} as swarm service...")
 
         chall_name = get_docker_name(challenge.name)
-        chall_tag = self.config.registry + "swarm/" + chall_name
+        chall_tag = (self.config.registry if isinstance(self.config.registry, str) else "") + "swarm/" + chall_name
         source_hash = get_source_hash(challenge.path + "/Source/")
 
         try:
