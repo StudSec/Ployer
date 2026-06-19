@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def get_docker_name(challenge_name: str) -> str:
-    return re.sub(r"[-. ]", "_", challenge_name.lower())
+    return re.sub(r"[/. -]", "_", challenge_name.lower())
 
 
 def get_source_hash(source_path: str) -> str:

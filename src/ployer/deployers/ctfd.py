@@ -151,22 +151,23 @@ def _replace_handout(url: str, headers: dict[str, str], challenge: Challenge, ch
         return
 
     # create a zip of the handouts and upload it as a file
-    filename = f"{challenge.name.replace(' ', '_')}.zip"
+    filename = f"{challenge.name.lower().replace(' ', '_')}.zip"
 
     for file_item in _get_collection(url, headers, "files", challenge_id):
         if filename in file_item.get("location", ""):
-            requests.delete(url + f"files/{file_item['id']}", headers=headers, timeout=600)
-    try:
-        subprocess.run(
-            ["zip", "-r", filename, "."],
-            cwd=challenge.path + "/Handout",
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    except subprocess.CalledProcessError:
-        logging.exception(f"Failed to create zip file for {challenge.name}")
-        return
+            requests.delete(url + f"files/{file_item['id']}", headers=headers, timeout=60)
+    if not os.path.exists(handout_path / filename):
+        try:
+            subprocess.run(
+                ["zip", "-r", filename, "."],
+                cwd=challenge.path + "/Handout",
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except subprocess.CalledProcessError:
+            logging.exception(f"Failed to create zip file for {challenge.name}")
+            return
 
     file_path = os.path.join(challenge.path + "/Handout", filename)
     with open(file_path, "rb") as file:
@@ -198,7 +199,9 @@ def upload_ctfd(challenge: Challenge, config: Config, runner: ChallengeRunner) -
     if existing:
         # Challenge exists, update it
         challenge_id = existing["id"]
-        patch_response = requests.patch(url + f"challenges/{challenge_id}", headers=headers, json=ctfd_data, timeout=600)
+        patch_response = requests.patch(
+            url + f"challenges/{challenge_id}", headers=headers, json=ctfd_data, timeout=600
+        )
         if patch_response.status_code != 200:
             logging.error(f"Failed to patch {challenge.name} on CTFd: {patch_response.text}")
             return
